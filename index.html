@@ -1,1 +1,841 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shaping Sun — Arbre de Compétences</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{width:100%;background:#0a0604;}
+body{font-family:'Crimson Text',serif;color:#f5e8c8;overflow-x:hidden;}
 
+/* ══ PARALLAX BACKGROUND ══
+   Mets tes 4 PNG dans le même dossier que ce fichier HTML.
+   background4.png → arrière-plan lointain (ciel, horizon)   — bouge le moins
+   background3.png → plan intermédiaire lointain (forêt profonde, brume)
+   background2.png → plan intermédiaire proche (arbres moyens)
+   background1.png → premier plan (feuillages, branches proches)  — bouge le plus
+*/
+.parallax-bg{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;}
+.para-layer{
+  position:absolute;
+  /* légèrement plus large/haute que la fenêtre pour permettre le déplacement */
+  top:-8%;left:-4%;width:108%;height:116%;
+  background-size:cover;
+  background-position:center center;
+  background-repeat:no-repeat;
+  will-change:transform;
+}
+.para-layer-4{background-image:url('background4.png');}
+.para-layer-3{background-image:url('background3.png');}
+.para-layer-2{background-image:url('background2.png');}
+.para-layer-1{background-image:url('background1.png');}
+/* Overlay sombre pour garder le canvas lisible */
+.para-overlay{position:absolute;inset:0;background:rgba(4,2,0,.5);}
+
+.page{position:relative;z-index:1;padding:18px 0 50px;}
+
+/* HEADER */
+header{text-align:center;padding:0 20px 10px;}
+.horn{display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:4px;}
+.hline{height:1px;width:80px;background:linear-gradient(90deg,transparent,#c8922a,transparent);}
+.title-main{
+  font-family:'Cinzel',serif;font-size:clamp(1.4rem,3vw,2.4rem);font-weight:700;letter-spacing:.16em;
+  background:linear-gradient(135deg,#f2d98a,#c8922a,#d4622a,#e8b84b);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  filter:drop-shadow(0 0 14px rgba(200,146,42,.45));
+}
+.title-sub{font-family:'Cinzel',serif;font-size:.7rem;letter-spacing:.38em;color:#c8922a;opacity:.65;text-transform:uppercase;margin-top:2px;}
+
+/* TOP BAR : points + légende côte à côte */
+.topbar{
+  display:flex;align-items:center;justify-content:center;
+  flex-wrap:wrap;gap:14px;
+  padding:6px 20px 8px;
+}
+.pbar{
+  display:flex;align-items:center;gap:10px;
+  background:linear-gradient(135deg,rgba(40,22,6,.95),rgba(58,33,10,.95));
+  border:1px solid rgba(200,146,42,.35);border-radius:50px;
+  padding:7px 20px;
+  box-shadow:0 3px 20px rgba(0,0,0,.5),inset 0 1px 0 rgba(200,146,42,.1);
+}
+.picon{font-size:1rem;filter:drop-shadow(0 0 6px #c8922a);}
+.plabel{font-family:'Cinzel',serif;font-size:.68rem;letter-spacing:.1em;color:#c8922a;}
+.pval{font-family:'Cinzel',serif;font-size:1.2rem;font-weight:700;color:#f2d98a;min-width:26px;text-align:center;filter:drop-shadow(0 0 8px rgba(200,146,42,.6));transition:all .3s;}
+.pval.flash{animation:fp .4s ease;}
+@keyframes fp{0%{transform:scale(1)}50%{transform:scale(1.4);color:#fff}100%{transform:scale(1)}}
+.rbtn{font-family:'Cinzel',serif;font-size:.6rem;letter-spacing:.08em;color:#d4622a;background:none;border:1px solid rgba(180,80,30,.3);border-radius:20px;padding:3px 10px;cursor:pointer;transition:all .2s;}
+.rbtn:hover{background:rgba(180,80,30,.18);border-color:#d4622a;color:#f2d98a;}
+
+/* LEGEND */
+.legend{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;align-items:center;}
+.li{display:flex;align-items:center;gap:5px;font-family:'Cinzel',serif;font-size:.58rem;letter-spacing:.07em;color:rgba(245,232,200,.42);}
+.ld{width:8px;height:8px;border-radius:50%;}
+
+/* CANVAS */
+.canvas-wrap{position:relative;width:100%;margin:0 auto;}
+#mainCanvas{display:block;width:100%;cursor:default;}
+
+/* ════ QUESTS ════ */
+.quests-section{max-width:1100px;margin:22px auto 0;padding:0 24px;}
+.quests-title{font-family:'Cinzel',serif;font-size:.95rem;font-weight:600;letter-spacing:.18em;color:#c8922a;text-align:center;margin-bottom:3px;filter:drop-shadow(0 0 8px rgba(200,146,42,.3));}
+.quests-sub{font-style:italic;font-size:.77rem;color:rgba(245,232,200,.4);text-align:center;margin-bottom:12px;}
+.quests-progress{display:flex;align-items:center;gap:10px;justify-content:center;margin-bottom:12px;}
+.qp-bar-wrap{flex:1;max-width:280px;height:5px;background:rgba(200,146,42,.12);border-radius:3px;overflow:hidden;}
+.qp-bar{height:100%;background:linear-gradient(90deg,#c84a2a,#c8922a,#f2d98a);border-radius:3px;transition:width .6s ease;box-shadow:0 0 8px rgba(200,146,42,.4);}
+.qp-label{font-family:'Cinzel',serif;font-size:.65rem;letter-spacing:.07em;color:rgba(245,232,200,.5);}
+
+/* Quest grid — 4 colonnes en paysage */
+.quests-grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:12px;
+}
+@media(max-width:900px){.quests-grid{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:500px){.quests-grid{grid-template-columns:1fr;}}
+
+.quest-card{
+  border-radius:12px;padding:14px 14px 12px;
+  border:1px solid rgba(200,146,42,.12);
+  background:linear-gradient(145deg,rgba(24,13,3,.97),rgba(44,26,7,.95));
+  position:relative;overflow:hidden;
+  transition:border-color .2s, box-shadow .2s;
+}
+.quest-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--qc,rgba(200,146,42,.3));transition:opacity .2s;}
+.quest-card.qavail{border-color:rgba(200,146,42,.35);--qc:linear-gradient(90deg,transparent,#c8922a,transparent);}
+.quest-card.qavail:hover{border-color:rgba(200,146,42,.7);box-shadow:0 0 16px rgba(200,146,42,.12);}
+.quest-card.qdone{--qc:linear-gradient(90deg,transparent,#4a9a3c,transparent);border-color:rgba(74,154,60,.3);}
+.quest-card.qlocked{opacity:.45;}
+.q-top{display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;}
+.q-icon{font-size:1.5rem;line-height:1;filter:drop-shadow(0 0 6px rgba(200,146,42,.4));flex-shrink:0;}
+.q-info{flex:1;min-width:0;}
+.q-name{font-family:'Cinzel',serif;font-size:.7rem;font-weight:600;letter-spacing:.07em;color:#f2d98a;line-height:1.2;}
+.q-diff{font-size:.62rem;letter-spacing:.06em;margin-top:2px;}
+.diff-1{color:#7ed86e;}.diff-2{color:#c8922a;}.diff-3{color:#f07055;}.diff-4{color:#c84a2a;filter:drop-shadow(0 0 4px #c84a2a);}
+.q-desc{font-size:.74rem;font-style:italic;color:rgba(245,232,200,.55);line-height:1.4;margin-bottom:9px;}
+.q-req{font-size:.64rem;color:rgba(245,232,200,.3);margin-bottom:6px;font-style:italic;}
+.q-footer{display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:wrap;}
+.q-reward{font-family:'Cinzel',serif;font-size:.68rem;color:#c8922a;display:flex;align-items:center;gap:4px;}
+.dot{font-size:.6rem;filter:drop-shadow(0 0 4px #c8922a);}
+.q-btn{font-family:'Cinzel',serif;font-size:.58rem;letter-spacing:.06em;color:#f2d98a;background:linear-gradient(135deg,rgba(200,146,42,.18),rgba(200,146,42,.08));border:1px solid rgba(200,146,42,.45);border-radius:18px;padding:4px 10px;cursor:pointer;transition:all .2s;}
+.q-btn:hover{background:linear-gradient(135deg,rgba(200,146,42,.32),rgba(200,146,42,.16));box-shadow:0 0 10px rgba(200,146,42,.2);}
+.q-done-badge{font-family:'Cinzel',serif;font-size:.6rem;color:#7ed86e;letter-spacing:.08em;filter:drop-shadow(0 0 4px #4a9a3c);}
+
+/* TOOLTIP */
+.tooltip{
+  position:fixed;z-index:9999;pointer-events:none;
+  background:linear-gradient(145deg,rgba(20,10,2,.98),rgba(45,25,7,.98));
+  border:1px solid rgba(200,146,42,.5);border-radius:12px;
+  padding:14px 16px;max-width:280px;min-width:200px;
+  opacity:0;transform:translateY(6px);transition:opacity .15s,transform .15s;
+  box-shadow:0 8px 32px rgba(0,0,0,.7),0 0 20px rgba(200,146,42,.06);
+}
+.tooltip.show{opacity:1;transform:translateY(0);}
+.tooltip::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(200,146,42,.6),transparent);}
+.tt-title{font-family:'Cinzel',serif;font-size:.82rem;font-weight:600;letter-spacing:.1em;margin-bottom:6px;text-shadow:0 0 10px currentColor;}
+.tt-desc{font-size:.76rem;font-style:italic;color:rgba(245,232,200,.62);line-height:1.45;margin-bottom:7px;}
+.tt-effect{font-size:.72rem;color:rgba(245,232,200,.75);margin-bottom:5px;padding:5px 8px;background:rgba(200,146,42,.06);border-left:2px solid rgba(200,146,42,.4);border-radius:0 4px 4px 0;}
+.tt-cost{font-family:'Cinzel',serif;font-size:.65rem;color:#c8922a;margin-bottom:4px;}
+.tt-state{font-family:'Cinzel',serif;font-size:.62rem;letter-spacing:.08em;}
+.tt-state.unlocked{color:#7ed86e;}.tt-state.available{color:#c8922a;}.tt-state.locked{color:#f07055;}
+
+/* PARTICLES */
+.particle{position:fixed;border-radius:50%;pointer-events:none;z-index:99999;animation:burst .7s ease-out forwards;}
+@keyframes burst{0%{opacity:1;transform:translate(0,0) scale(1)}100%{opacity:0;transform:translate(var(--tx),var(--ty)) scale(0);}}
+
+/* NOTIF */
+.notif{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);z-index:9000;
+  background:linear-gradient(135deg,rgba(40,22,6,.97),rgba(65,38,8,.97));
+  border:1px solid rgba(200,146,42,.5);border-radius:30px;padding:9px 22px;
+  font-family:'Cinzel',serif;font-size:.72rem;letter-spacing:.1em;color:#f2d98a;
+  opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap;
+  box-shadow:0 6px 24px rgba(0,0,0,.5);}
+.notif.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* QUEST MODAL */
+.qmodal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:10000;opacity:0;pointer-events:none;transition:opacity .3s ease;}
+.qmodal-overlay.show{opacity:1;pointer-events:all;}
+.qmodal{background:linear-gradient(145deg,rgba(24,12,3,.99),rgba(55,32,8,.99));border:1px solid rgba(200,146,42,.6);border-radius:18px;padding:32px 36px;max-width:420px;width:90%;text-align:center;position:relative;box-shadow:0 0 60px rgba(200,146,42,.25),0 20px 60px rgba(0,0,0,.8);animation:modalPop .4s cubic-bezier(.34,1.56,.64,1);}
+@keyframes modalPop{0%{transform:scale(.7);opacity:0}100%{transform:scale(1);opacity:1}}
+.qmodal-icon{font-size:3rem;margin-bottom:10px;filter:drop-shadow(0 0 16px #c8922a);}
+.qmodal-title{font-family:'Cinzel',serif;font-size:1.1rem;font-weight:700;letter-spacing:.15em;color:#f2d98a;margin-bottom:6px;}
+.qmodal-pts{font-family:'Cinzel',serif;font-size:2rem;font-weight:700;color:#f2d98a;filter:drop-shadow(0 0 12px #c8922a);margin:12px 0 8px;}
+.qmodal-desc{font-style:italic;font-size:.86rem;color:rgba(245,232,200,.65);line-height:1.5;margin-bottom:18px;}
+.qmodal-close{font-family:'Cinzel',serif;font-size:.75rem;letter-spacing:.1em;background:linear-gradient(135deg,rgba(200,146,42,.2),rgba(200,146,42,.1));border:1px solid rgba(200,146,42,.5);border-radius:24px;padding:8px 24px;cursor:pointer;color:#f2d98a;transition:all .2s;}
+.qmodal-close:hover{background:linear-gradient(135deg,rgba(200,146,42,.35),rgba(200,146,42,.2));box-shadow:0 0 14px rgba(200,146,42,.25);}
+</style>
+</head>
+<body>
+<!-- ══ PARALLAX LAYERS ══ -->
+<div class="parallax-bg" id="parallaxBg">
+  <div class="para-layer para-layer-4" id="para4"></div>
+  <div class="para-layer para-layer-3" id="para3"></div>
+  <div class="para-layer para-layer-2" id="para2"></div>
+  <div class="para-layer para-layer-1" id="para1"></div>
+  <div class="para-overlay"></div>
+</div>
+
+<div class="page">
+
+  <header>
+    <div class="horn">
+      <div class="hline"></div>
+      <span style="font-size:1.2rem;color:#c8922a;filter:drop-shadow(0 0 7px #c8922a)">✦</span>
+      <div class="hline"></div>
+    </div>
+    <div class="title-main">SHAPING SUN</div>
+    <div class="title-sub">Arbre de Compétences</div>
+  </header>
+
+  <div class="topbar">
+    <div class="pbar">
+      <span class="picon">✦</span>
+      <span class="plabel">Points disponibles</span>
+      <span class="pval" id="pval">15</span>
+      <button class="rbtn" id="resetBtn">↺ Reset</button>
+    </div>
+    <div class="legend">
+      <div class="li"><div class="ld" style="background:#c84a2a;box-shadow:0 0 6px #c84a2a"></div>SURVIE</div>
+      <div class="li"><div class="ld" style="background:#9a4ac8;box-shadow:0 0 6px #9a4ac8"></div>FURTIVITÉ</div>
+      <div class="li"><div class="ld" style="background:#4a9a3c;box-shadow:0 0 6px #4a9a3c"></div>PISTAGE</div>
+      <div class="li"><div class="ld" style="background:#4a9ab8;box-shadow:0 0 6px #4a9ab8"></div>SCULPTURE</div>
+      <div class="li"><div class="ld" style="background:#c8922a;box-shadow:0 0 6px #c8922a"></div>FUSION</div>
+    </div>
+  </div>
+
+  <div class="canvas-wrap" id="canvasWrap">
+    <canvas id="mainCanvas"></canvas>
+  </div>
+
+  <!-- QUESTS -->
+  <div class="quests-section">
+    <div class="quests-title">✦ &nbsp; QUÊTES DE LA FORÊT &nbsp; ✦</div>
+    <div class="quests-sub">Accomplis des quêtes pour gagner des points supplémentaires. Certaines ne se débloquent que lorsque tu es prête.</div>
+    <div class="quests-progress">
+      <span class="qp-label" id="qp-done">0 / 8 quêtes</span>
+      <div class="qp-bar-wrap"><div class="qp-bar" id="qp-bar" style="width:0%"></div></div>
+      <span class="qp-label" id="qp-pts">+0 pts gagnés</span>
+    </div>
+    <div class="quests-grid" id="questsGrid"></div>
+  </div>
+
+</div>
+
+<!-- TOOLTIP -->
+<div class="tooltip" id="tooltip">
+  <div class="tt-title" id="tt-title"></div>
+  <div class="tt-desc" id="tt-desc"></div>
+  <div class="tt-effect" id="tt-effect"></div>
+  <div class="tt-cost" id="tt-cost"></div>
+  <div class="tt-state" id="tt-state"></div>
+</div>
+
+<!-- QUEST MODAL -->
+<div class="qmodal-overlay" id="qmodal-overlay">
+  <div class="qmodal">
+    <div class="qmodal-icon" id="qmodal-icon">🏆</div>
+    <div class="qmodal-title" id="qmodal-title">QUÊTE ACCOMPLIE</div>
+    <div class="qmodal-pts" id="qmodal-pts">+2 pts</div>
+    <div class="qmodal-desc" id="qmodal-desc"></div>
+    <button class="qmodal-close" onclick="closeModal()">Continuer l'aventure</button>
+  </div>
+</div>
+
+<div class="notif" id="notif"></div>
+
+<script>
+const BASE_PTS = 15;
+let pts = BASE_PTS;
+
+const C = {
+  survie:   {fill:'#8B2020',stroke:'#c84a2a',glow:'#f07055',text:'#f5a090'},
+  furtivite:{fill:'#4a1a70',stroke:'#9a4ac8',glow:'#d07ef0',text:'#c89ee8'},
+  pistage:  {fill:'#1a4a18',stroke:'#4a9a3c',glow:'#7ed86e',text:'#9ee890'},
+  sculpture:{fill:'#0e3a50',stroke:'#4a9ab8',glow:'#7ed4f0',text:'#90c8e0'},
+  fusion:   {fill:'#5a3a00',stroke:'#c8922a',glow:'#f2d98a',text:'#f2d98a'},
+};
+
+/*
+  FORMAT PAYSAGE — disposition horizontale
+  X : 4 branches réparties sur la largeur + centre pour fusions
+      Survie   : x ≈ 0.12
+      Furtivité: x ≈ 0.32
+      Centre   : x ≈ 0.50
+      Pistage  : x ≈ 0.68
+      Sculpture: x ≈ 0.88
+
+  Y : les nœuds montent de bas (start, niveau 1) vers le haut (ultime)
+      start    : y = 0.92
+      niveau 1 : y = 0.78
+      niveau 2 : y = 0.62
+      niveau 3 : y = 0.46
+      niveau 4 : y = 0.30
+      niveau 5  : y = 0.14
+      fusions  : y entre 0.38 et 0.22
+      ultime   : y = 0.05
+*/
+const nodes = [
+  // ── DÉPART ──
+  {id:'start',label:'Shaping Sun',icon:'✦',branch:'fusion',x:.50,y:.92,r:1.5,root:true,
+   desc:'Point de départ. Tu es l\'artisane de la forêt.',
+   effect:'Débloque les 4 premières compétences de chaque branche.',cost:0},
+
+  // ── SURVIE (colonne gauche) ──
+  {id:'v0',label:'Endurance',             icon:'💪',branch:'survie',   x:.12,y:.78,r:1.25,cost:1,req:['start'],
+   desc:'Corps renforcé pour les longues expéditions.',
+   effect:'Stamina +20%. Sprint étendu dans les zones denses.'},
+  {id:'v1',label:'Premiers secours',      icon:'➕',branch:'survie',   x:.12,y:.62,r:1.1, cost:1,req:['v0'],
+   desc:'Plantes médicinales et bandages fabriqués en forêt.',
+   effect:'Soin hors combat accéléré. Cataplasmes naturels débloqués.'},
+  {id:'v2',label:'Réflexes défensifs',    icon:'🛡️',branch:'survie',  x:.12,y:.46,r:1.1, cost:2,req:['v1'],
+   desc:'Anticiper les attaques et se protéger avec les bras.',
+   effect:'Résistance +15%. Une attaque de mante ne tue plus instantanément.'},
+  {id:'v3',label:'Inventaire étendu',     icon:'🎒',branch:'survie',   x:.12,y:.30,r:1.1, cost:2,req:['v2'],
+   desc:'Sac agrandi en cuir et lianes tressées.',
+   effect:'+3 emplacements. 2 sculptures supplémentaires transportables.'},
+  {id:'v4',label:'Maîtrise du combat',    icon:'⚔️',branch:'survie',   x:.12,y:.14,r:1.1, cost:3,req:['v3'],
+   desc:'Le ciseau devient outil de survie. Repousser sans tuer.',
+   effect:'Repousser et étourdir les créatures agressives. Fuite facilitée.'},
+
+  // ── FURTIVITÉ (2e colonne) ──
+  {id:'s0',label:'Pas silencieux',        icon:'🐾',branch:'furtivite',x:.32,y:.78,r:1.25,cost:1,req:['start'],
+   desc:'Apprendre à poser les pieds sans faire craquer les branches.',
+   effect:'Rayon de détection des mantes réduit de 15%.'},
+  {id:'s1',label:'Pièges basiques',       icon:'🏕️',branch:'furtivite',x:.32,y:.62,r:1.1, cost:1,req:['s0'],
+   desc:'Collets et fosses en bois pour ralentir les prédateurs.',
+   effect:'Fabriquer pièges simples. Mantes immobilisées 8s.'},
+  {id:'s2',label:'Camouflage naturel',    icon:'🌿',branch:'furtivite',x:.32,y:.46,r:1.1, cost:2,req:['s1'],
+   desc:'Feuillage et boue appliqués sur les vêtements pour disparaître.',
+   effect:'Mode invisible si immobile : les mantes passent devant toi.'},
+  {id:'s3',label:'Pièges complexes',      icon:'⚙️',branch:'furtivite',x:.32,y:.30,r:1.1, cost:2,req:['s2'],
+   desc:'Mécanismes à ressorts, filets dissimulés, leurres sonores.',
+   effect:'Nouvelles recettes. Pièges enchaînables pour canaliser les mantes.'},
+  {id:'s4',label:'Art du leurre',         icon:'🎭',branch:'furtivite',x:.32,y:.14,r:1.1, cost:3,req:['s3'],
+   desc:'Sculptures imitant les créatures pour distraire les mantes.',
+   effect:'Déployer un leurre sculpté : distraction 30s.'},
+
+  // ── PISTAGE (3e colonne) ──
+  {id:'p0',label:'Sens de l\'orient.',    icon:'🧭',branch:'pistage',  x:.68,y:.78,r:1.25,cost:1,req:['start'],
+   desc:'Lire le soleil, les mousses et les étoiles.',
+   effect:'Indicateur de direction permanent. Retour au village facilité.'},
+  {id:'p1',label:'Lecture des traces',    icon:'👣',branch:'pistage',  x:.68,y:.62,r:1.1, cost:1,req:['p0'],
+   desc:'Identifier empreintes et marquages laissés par les créatures.',
+   effect:'Révèle les pistes actives dans un rayon de 30m.'},
+  {id:'p2',label:'Communion naturelle',   icon:'🌟',branch:'pistage',  x:.68,y:.46,r:1.1, cost:2,req:['p1'],
+   desc:'Comprendre le rythme de la forêt, ses cycles et ses présences.',
+   effect:'Créatures proches signalées par ambiance sonore.'},
+  {id:'p3',label:'Cartographie',          icon:'🗺️',branch:'pistage',  x:.68,y:.30,r:1.1, cost:2,req:['p2'],
+   desc:'Dessiner la forêt au fil des explorations pour la maîtriser.',
+   effect:'Ouvre la carte. Marquer les zones de créatures observées.'},
+  {id:'p4',label:'Comport. prévisible',   icon:'🦋',branch:'pistage',  x:.68,y:.14,r:1.1, cost:3,req:['p3'],
+   desc:'Anticiper les déplacements selon l\'heure, la météo et la saison.',
+   effect:'Prévoir les zones d\'apparition. Traque nocturne débloquée.'},
+
+  // ── SCULPTURE (colonne droite) ──
+  {id:'sc0',label:'Croquis rapide',       icon:'✏️',branch:'sculpture',x:.88,y:.78,r:1.25,cost:1,req:['start'],
+   desc:'Capturer l\'essence d\'une créature dans le carnet de terrain.',
+   effect:'Déblocage du bestiaire. Mémoriser les créatures observées.'},
+  {id:'sc1',label:'Sculpture de base',    icon:'🪵',branch:'sculpture',x:.88,y:.62,r:1.1, cost:1,req:['sc0'],
+   desc:'Tailler les formes basiques dans le bois commun trouvé en forêt.',
+   effect:'Sculptures simples fabricables. Repères de chemin. Vente au village.'},
+  {id:'sc2',label:'Bestiaire vivant',     icon:'📖',branch:'sculpture',x:.88,y:.46,r:1.1, cost:2,req:['sc1'],
+   desc:'Croquis et sculptures s\'organisent en encyclopédie illustrée.',
+   effect:'Révèle comportements et faiblesses secrètes des créatures.'},
+  {id:'sc3',label:'Sculpture détaillée', icon:'🔮',branch:'sculpture',x:.88,y:.30,r:1.1, cost:2,req:['sc2'],
+   desc:'Maîtriser textures d\'écailles, fourrure, expressions subtiles.',
+   effect:'Sculptures à attrait mystique. Attire les créatures calmes.'},
+  {id:'sc4',label:'Sculpteure maîtresse',icon:'✨',branch:'sculpture',x:.88,y:.14,r:1.1, cost:3,req:['sc3'],
+   desc:'Le bois prend l\'âme de la créature. Tes œuvres semblent vivantes.',
+   effect:'Appâts puissants. Vente max. Preuves irréfutables pour le village.'},
+
+  // ── NŒUDS DE FUSION (centre) ──
+  {id:'f0',label:'Sagesse forestière',   icon:'🌿',branch:'fusion',   x:.50,y:.54,r:1.0, cost:0,req:['s2','p1'],cross:true,
+   desc:'Furtivité + pistage : lire la forêt tout en restant invisible.',
+   effect:'Camouflée et à l\'affût des traces — créatures rares x1.5.'},
+  {id:'f1',label:'Chasseuse érudite',    icon:'🦋',branch:'fusion',   x:.50,y:.38,r:1.05,cost:0,req:['f0','v2','sc2'],cross:true,
+   desc:'Nœud de convergence central — toutes les branches se rejoignent.',
+   effect:'Débloque les synergies avancées et les nœuds finaux.'},
+  {id:'f2',label:'Traqueur de rareté',   icon:'✨',branch:'fusion',   x:.50,y:.24,r:1.0, cost:0,req:['p4','sc2'],cross:true,
+   desc:'Pistage avancé + bestiaire : localiser les créatures mythiques.',
+   effect:'Créatures étudiées apparaissent sur la carte du monde.'},
+  {id:'f3',label:'Ombre sculptée',       icon:'🌑',branch:'fusion',   x:.50,y:.10,r:1.0, cost:0,req:['s4','sc4'],cross:true,
+   desc:'Art du leurre + sculpture parfaite : les mantes croient voir une vraie créature.',
+   effect:'Distraction doublée à 60s. Leurres rechargeables au camp.'},
+
+  // ── ULTIME ──
+  {id:'ult',label:'Façonneuse du Soleil',icon:'☀️',branch:'fusion',   x:.50,y:.03,r:1.6, cost:5,ultimate:true,
+   req:['v4','s4','p4','sc4','f1','f2','f3'],
+   desc:'Armée de toutes tes sculptures, tu révèles les secrets de la forêt. Tes créations brisent le cycle de terreur des mantes — non par la violence, mais par la connaissance.',
+   effect:'Fin débloquée. La forêt retrouve la paix. Le village te croit enfin.'},
+];
+
+const QUESTS = [
+  {id:'q0',icon:'🌱',name:'Première sortie',reward:2,diff:1,diffLabel:'Facile',
+   desc:'Observe et croque ta première créature sauvage dans la forêt peu dense. Rentre vivante.',
+   flavor:'Elle était là, immobile dans les fougères. Tu as dessiné d\'une main tremblante.',req:[]},
+  {id:'q1',icon:'🪤',name:'Le piège tient bon',reward:2,diff:1,diffLabel:'Facile',
+   desc:'Pose 3 pièges basiques et immobilise une créature agressive sans te faire repérer.',
+   flavor:'Le bois craqua, le piège se referma. La forêt ne t\'a pas entendue.',req:['q0']},
+  {id:'q2',icon:'🗺️',name:'Cartographe novice',reward:3,diff:2,diffLabel:'Modéré',
+   desc:'Explore les marécages et cartographie deux zones inconnues sans te faire attaquer.',
+   flavor:'Tu as dessiné les arbres tordus et les eaux noires. La carte commence à avoir un sens.',req:['q0']},
+  {id:'q3',icon:'🦎',name:'Créature agressive',reward:3,diff:2,diffLabel:'Modéré',
+   desc:'Approche-toi d\'une créature agressive pour en faire un croquis détaillé. Utilise ton camouflage.',
+   flavor:'Ses yeux te regardaient. Mais tu étais déjà partie — avec son portrait.',req:['q1','q2']},
+  {id:'q4',icon:'🌙',name:'Nuit dans la forêt',reward:4,diff:3,diffLabel:'Difficile',
+   desc:'Passe une nuit entière dans la forêt dense. Observe les créatures nocturnes et rentre avec 3 croquis.',
+   flavor:'L\'obscurité vivait. Tu as appris à l\'écouter plutôt qu\'à la fuir.',req:['q2','q3']},
+  {id:'q5',icon:'🔥',name:'La mante trompée',reward:4,diff:3,diffLabel:'Difficile',
+   desc:'Déploie un leurre sculpté et observe une mante religieuse l\'attaquer sans te repérer.',
+   flavor:'Elle a déchiré ta sculpture. Tu regardais, cachée derrière les ronces, en souriant.',req:['q3']},
+  {id:'q6',icon:'🏔️',name:'Expédition en montagne',reward:5,diff:4,diffLabel:'Extrême',
+   desc:'Atteins le sommet des montagnes, documente 2 créatures mythiques jamais vues au village.',
+   flavor:'En haut, la forêt s\'étendait à l\'infini. Tu as compris que tu n\'en avais fait qu\'effleurer la surface.',req:['q4','q5']},
+  {id:'q7',icon:'👁️',name:'La dernière mante',reward:5,diff:4,diffLabel:'Extrême',
+   desc:'Localise la plus grande mante connue. Approche-toi assez pour en faire une sculpture parfaite.',
+   flavor:'C\'était la reine de la forêt. Et maintenant, elle vit dans tes mains, immobile pour l\'éternité.',req:['q6']},
+];
+
+const U = new Set(['start']);
+const QD = new Set();
+let bonusPts = 0;
+
+function getNode(id){ return nodes.find(n=>n.id===id); }
+function getState(node){
+  if(node.root) return 'unlocked';
+  if(U.has(node.id)) return 'unlocked';
+  if(!node.req) return pts>=node.cost?'available':'locked';
+  if(!node.req.every(r=>U.has(r))) return 'locked';
+  if(node.cross) return 'available';
+  return pts>=node.cost?'available':'locked';
+}
+function questState(q){
+  if(QD.has(q.id)) return 'done';
+  if(q.req.every(r=>QD.has(r))) return 'available';
+  return 'locked';
+}
+
+/* ════ CANVAS ════ */
+const canvas=document.getElementById('mainCanvas');
+const ctx=canvas.getContext('2d');
+const wrap=document.getElementById('canvasWrap');
+let W,H,DPR;
+// Ratio paysage large
+const BASE_W=1200, BASE_H=680;
+
+function resize(){
+  DPR=window.devicePixelRatio||1;
+  W=wrap.clientWidth; H=W*(BASE_H/BASE_W);
+  canvas.width=W*DPR; canvas.height=H*DPR;
+  canvas.style.width=W+'px'; canvas.style.height=H+'px';
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.scale(DPR,DPR);
+  draw();
+}
+
+const nx=n=>n.x*W, ny=n=>n.y*H;
+// Taille des nœuds
+const nr=n=>n.r*(W/BASE_W)*26;
+
+let hoveredNode=null, animFrame=0, raf;
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  animFrame++;
+  // fond subtil
+  const vg=ctx.createRadialGradient(W/2,0,0,W/2,0,H*.9);
+  vg.addColorStop(0,'rgba(200,100,20,.06)');
+  vg.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=vg; ctx.fillRect(0,0,W,H);
+
+  // séparateurs verticaux entre branches
+  drawSeparators();
+  drawEdges();
+  drawNodes();
+  drawBranchLabels();
+}
+
+function drawSeparators(){
+  // lignes verticales légères entre les 4 branches
+  [.22,.42,.58,.78].forEach(fx=>{
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(fx*W, H*.06); ctx.lineTo(fx*W, H*.88);
+    ctx.strokeStyle='rgba(200,146,42,.04)';
+    ctx.lineWidth=1;
+    ctx.stroke();
+    ctx.restore();
+  });
+}
+
+function drawEdges(){
+  nodes.forEach(node=>{
+    if(!node.req) return;
+    node.req.forEach(reqId=>{
+      const from=getNode(reqId); if(!from) return;
+      const stF=getState(from), stT=getState(node);
+      const lit=stF==='unlocked'&&stT==='unlocked';
+      const semi=stF==='unlocked'&&stT!=='unlocked';
+      const isCross=from.branch!==node.branch||node.cross||from.cross;
+      const x1=nx(from),y1=ny(from),x2=nx(node),y2=ny(node);
+      ctx.save();
+      if(lit){
+        const grad=ctx.createLinearGradient(x1,y1,x2,y2);
+        grad.addColorStop(0,(C[from.branch]||C.fusion).glow);
+        grad.addColorStop(1,(C[node.branch]||C.fusion).glow);
+        ctx.strokeStyle=grad; ctx.lineWidth=isCross?1.8:2.2;
+        ctx.shadowBlur=isCross?6:10; ctx.shadowColor=(C[node.branch]||C.fusion).glow;
+        if(isCross) ctx.setLineDash([7,5]);
+      } else if(semi){
+        ctx.strokeStyle=isCross?'rgba(200,146,42,.15)':'rgba(200,146,42,.22)';
+        ctx.lineWidth=1.3; ctx.shadowBlur=0;
+        if(isCross) ctx.setLineDash([5,5]);
+      } else {
+        ctx.strokeStyle='rgba(200,146,42,.07)'; ctx.lineWidth=1;
+        if(isCross) ctx.setLineDash([4,5]);
+      }
+      ctx.beginPath();
+      // courbe de bézier — légère courbure
+      const mx=(x1+x2)/2, my=(y1+y2)/2;
+      const bend=(y2-y1)*0.1;
+      ctx.moveTo(x1,y1);
+      ctx.quadraticCurveTo(mx+bend,my,x2,y2);
+      ctx.stroke(); ctx.restore();
+    });
+  });
+}
+
+function drawNodes(){
+  nodes.forEach(node=>{
+    const st=getState(node);
+    const col=C[node.branch]||C.fusion;
+    const x=nx(node),y=ny(node),r=nr(node);
+    const isHov=hoveredNode&&hoveredNode.id===node.id;
+    const pulse=Math.sin(animFrame*0.04+node.x*10)*0.5+0.5;
+    ctx.save();
+
+    // halo pulsant si débloqué
+    if(st==='unlocked'){
+      ctx.beginPath(); ctx.arc(x,y,r+6+pulse*4,0,Math.PI*2);
+      ctx.strokeStyle=col.glow; ctx.lineWidth=1.2;
+      ctx.globalAlpha=0.16+pulse*0.14; ctx.shadowBlur=14; ctx.shadowColor=col.glow;
+      ctx.stroke(); ctx.globalAlpha=1; ctx.shadowBlur=0;
+    }
+
+    const sc=isHov&&st!=='locked'?1.1:1;
+
+    // anneau extérieur
+    ctx.beginPath(); ctx.arc(x,y,r*sc,0,Math.PI*2);
+    if(st==='locked'){ ctx.setLineDash([4,4]); ctx.strokeStyle='rgba(200,146,42,.2)'; ctx.lineWidth=1.3; }
+    else if(st==='available'){ ctx.setLineDash([]); ctx.strokeStyle=col.stroke; ctx.lineWidth=isHov?2.8:2; ctx.shadowBlur=isHov?18:8; ctx.shadowColor=col.glow; }
+    else { ctx.setLineDash([]); ctx.strokeStyle=col.glow; ctx.lineWidth=isHov?3.2:2.4; ctx.shadowBlur=isHov?22:13; ctx.shadowColor=col.glow; }
+    ctx.stroke(); ctx.setLineDash([]); ctx.shadowBlur=0;
+
+    // fond du nœud
+    ctx.beginPath(); ctx.arc(x,y,r*sc,0,Math.PI*2);
+    if(st==='locked'){ ctx.fillStyle='rgba(14,8,2,.7)'; ctx.globalAlpha=0.5; }
+    else if(st==='available'){
+      const g=ctx.createRadialGradient(x-r*.2,y-r*.2,0,x,y,r*sc);
+      g.addColorStop(0,col.fill+'dd'); g.addColorStop(1,'rgba(14,8,2,.9)'); ctx.fillStyle=g;
+    } else {
+      const g=ctx.createRadialGradient(x-r*.25,y-r*.25,0,x,y,r*sc*1.1);
+      g.addColorStop(0,col.stroke+'88'); g.addColorStop(.5,col.fill+'ee'); g.addColorStop(1,'rgba(14,8,2,.85)');
+      ctx.fillStyle=g; ctx.shadowBlur=8; ctx.shadowColor=col.glow;
+    }
+    ctx.fill(); ctx.globalAlpha=1; ctx.shadowBlur=0;
+
+    // icône
+    const fs=r*sc*(node.ultimate?.82:.70);
+    ctx.font=`${fs}px serif`; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.globalAlpha=st==='locked'?.28:1;
+    ctx.fillText(node.icon,x,y); ctx.globalAlpha=1;
+
+    // label sous (ou au-dessus pour ultime)
+    const labelSize=Math.max(7.5,r*.40);
+    const ly2=node.ultimate?y-r*sc-8:y+r*sc+10;
+    ctx.font=`${node.ultimate?'600':'400'} ${labelSize}px 'Cinzel',serif`;
+    ctx.textAlign='center'; ctx.textBaseline=node.ultimate?'bottom':'top';
+    ctx.globalAlpha=st==='locked'?.22:(st==='unlocked'?1:.72);
+    ctx.fillStyle=st==='unlocked'?col.text:(st==='available'?'#f5e8c8':'rgba(245,232,200,.38)');
+    if(st==='unlocked'){ ctx.shadowBlur=5; ctx.shadowColor=col.glow; }
+    const words=node.label.split(' ');
+    if(words.length>2&&!node.ultimate){
+      const half=Math.ceil(words.length/2);
+      const lh=labelSize+3;
+      ctx.fillText(words.slice(0,half).join(' '),x,ly2);
+      ctx.fillText(words.slice(half).join(' '),x,ly2+lh);
+    } else {
+      ctx.fillText(node.label,x,ly2);
+    }
+    ctx.globalAlpha=1; ctx.shadowBlur=0;
+
+    // badge coût
+    if(node.cost>0&&st!=='unlocked'){
+      const bx=x+r*.7, by=y-r*.7;
+      ctx.save();
+      ctx.beginPath(); ctx.arc(bx,by,r*.32,0,Math.PI*2);
+      ctx.fillStyle=st==='available'?col.fill+'ee':'rgba(20,10,2,.85)';
+      ctx.fill();
+      ctx.strokeStyle=st==='available'?col.stroke:'rgba(200,146,42,.3)';
+      ctx.lineWidth=1; ctx.stroke();
+      ctx.font=`600 ${Math.max(7,r*.28)}px 'Cinzel',serif`;
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillStyle=st==='available'?'#f2d98a':'rgba(200,146,42,.5)';
+      ctx.fillText(node.cost,bx,by);
+      ctx.restore();
+    }
+
+    ctx.restore();
+  });
+}
+
+function drawBranchLabels(){
+  const yBottom = H*0.96;
+  [
+    {label:'SURVIE & COMBAT',    x:.12, col:'#c84a2a'},
+    {label:'FURTIVITÉ',          x:.32, col:'#9a4ac8'},
+    {label:'PISTAGE',            x:.68, col:'#4a9a3c'},
+    {label:'SCULPTURE',          x:.88, col:'#4a9ab8'},
+  ].forEach(b=>{
+    ctx.save();
+    ctx.font="600 12px 'Cinzel',serif";
+    ctx.textAlign='center'; ctx.textBaseline='bottom';
+    ctx.fillStyle=b.col; ctx.globalAlpha=.6;
+    ctx.shadowBlur=6; ctx.shadowColor=b.col;
+    ctx.fillText(b.label, b.x*W, yBottom);
+    ctx.restore();
+  });
+  // label centre
+  ctx.save();
+  ctx.font="600 11px 'Cinzel',serif";
+  ctx.textAlign='center'; ctx.textBaseline='bottom';
+  ctx.fillStyle='#c8922a'; ctx.globalAlpha=.5;
+  ctx.shadowBlur=5; ctx.shadowColor='#c8922a';
+  ctx.fillText('FUSIONS & ULTIME', .50*W, yBottom);
+  ctx.restore();
+}
+
+function loop(){ draw(); raf=requestAnimationFrame(loop); }
+
+/* ════ INTERACTION ════ */
+function getCanvasPos(e){
+  const r=canvas.getBoundingClientRect();
+  const cx=(e.clientX??e.touches[0].clientX)-r.left;
+  const cy=(e.clientY??e.touches[0].clientY)-r.top;
+  // Tenir compte du ratio CSS vs canvas
+  return {x:cx*(W/r.width), y:cy*(H/r.height)};
+}
+function findNodeAt(cx,cy){
+  for(let i=nodes.length-1;i>=0;i--){
+    const n=nodes[i]; const dx=cx-nx(n), dy=cy-ny(n); const r=nr(n)*1.2;
+    if(dx*dx+dy*dy<=r*r) return n;
+  }
+  return null;
+}
+
+const tooltip=document.getElementById('tooltip');
+function showTooltip(node,ex,ey){
+  const st=getState(node); const col=C[node.branch]||C.fusion;
+  document.getElementById('tt-title').textContent=node.label;
+  document.getElementById('tt-title').style.color=col.glow;
+  document.getElementById('tt-desc').textContent=node.desc;
+  document.getElementById('tt-effect').textContent='⚙ '+node.effect;
+  document.getElementById('tt-cost').textContent=
+    node.cost>0?`Coût : ${node.cost} point${node.cost>1?'s':''}`:(node.cross||node.root?'Synergie — gratuite':'');
+  const stEl=document.getElementById('tt-state');
+  if(node.root){stEl.textContent='';}
+  else if(st==='unlocked'){stEl.textContent='✦ Débloqué';stEl.className='tt-state unlocked';}
+  else if(st==='available'){stEl.textContent='◉ Disponible — cliquer pour débloquer';stEl.className='tt-state available';}
+  else{
+    const missing=(node.req||[]).filter(r=>!U.has(r)).map(r=>getNode(r)?.label||r).join(', ');
+    stEl.textContent=missing?`✗ Requiert : ${missing}`:'✗ Pas assez de points';
+    stEl.className='tt-state locked';
+  }
+  tooltip.classList.add('show');
+  const tw=280,th=170; let lx=ex+16,ly=ey-20;
+  if(lx+tw>window.innerWidth-10) lx=ex-tw-16;
+  if(ly+th>window.innerHeight-10) ly=ey-th-10;
+  if(ly<10) ly=10;
+  tooltip.style.left=lx+'px'; tooltip.style.top=ly+'px';
+}
+
+canvas.addEventListener('mousemove',e=>{
+  const {x,y}=getCanvasPos(e);
+  const n=findNodeAt(x,y);
+  hoveredNode=n;
+  canvas.style.cursor=n&&getState(n)!=='locked'?'pointer':'default';
+  if(n) showTooltip(n,e.clientX,e.clientY);
+  else tooltip.classList.remove('show');
+});
+canvas.addEventListener('mouseleave',()=>{ hoveredNode=null; tooltip.classList.remove('show'); });
+canvas.addEventListener('click',e=>{
+  const {x,y}=getCanvasPos(e);
+  const n=findNodeAt(x,y); if(!n) return;
+  toggleNode(n,e.clientX,e.clientY);
+});
+
+function toggleNode(node,ex,ey){
+  if(node.root) return;
+  const st=getState(node);
+  if(st==='available'){
+    U.add(node.id);
+    if(!node.cross&&node.cost>0) pts-=node.cost;
+    burst(ex,ey,(C[node.branch]||C.fusion).glow);
+    updatePts(); showNotif(`✦ ${node.label} débloqué !`);
+    if(node.id==='ult'){
+      ['#f2d98a','#c8922a','#e8b84b'].forEach((c,i)=>setTimeout(()=>burst(ex+(-20+i*20),ey+(-10+i*10),c),i*200));
+      showNotif('☀ Façonneuse du Soleil — Ultime débloquée !');
+    }
+    nodes.filter(n=>n.cross&&!U.has(n.id)).forEach(n=>{
+      if(n.req&&n.req.every(r=>U.has(r))) U.add(n.id);
+    });
+    renderQuests(); return;
+  }
+  if(st==='unlocked'&&!node.root&&!node.cross){
+    const deps=nodes.filter(n=>n.req&&n.req.includes(node.id)&&U.has(n.id));
+    if(deps.length>0){showNotif('⚠ D\'autres compétences dépendent de celle-ci');return;}
+    U.delete(node.id); pts+=node.cost;
+    nodes.filter(n=>n.cross&&U.has(n.id)).forEach(n=>{
+      if(n.req&&!n.req.every(r=>U.has(r))) U.delete(n.id);
+    });
+    updatePts(); showNotif(`↺ ${node.label} remboursé`); renderQuests(); return;
+  }
+  if(st==='locked'){
+    const missing=(node.req||[]).filter(r=>!U.has(r));
+    showNotif(missing.length?'🔒 Compétences requises manquantes':'✦ Pas assez de points');
+  }
+}
+
+/* ════ QUÊTES ════ */
+function completeQuest(q){
+  if(QD.has(q.id)||questState(q)!=='available') return;
+  QD.add(q.id); bonusPts+=q.reward; pts+=q.reward;
+  updatePts(); renderQuests();
+  nodes.filter(n=>n.cross&&!U.has(n.id)).forEach(n=>{
+    if(n.req&&n.req.every(r=>U.has(r))) U.add(n.id);
+  });
+  showQuestModal(q);
+  burst(window.innerWidth/2,window.innerHeight/2,'#f2d98a');
+}
+function showQuestModal(q){
+  document.getElementById('qmodal-icon').textContent=q.icon;
+  document.getElementById('qmodal-title').textContent=`QUÊTE ACCOMPLIE — ${q.name.toUpperCase()}`;
+  document.getElementById('qmodal-pts').textContent=`+${q.reward} point${q.reward>1?'s':''}`;
+  document.getElementById('qmodal-desc').textContent=q.flavor;
+  document.getElementById('qmodal-overlay').classList.add('show');
+}
+function closeModal(){ document.getElementById('qmodal-overlay').classList.remove('show'); }
+
+function renderQuests(){
+  const grid=document.getElementById('questsGrid');
+  grid.innerHTML='';
+  const totalDone=QD.size,total=QUESTS.length;
+  const ptsDone=QUESTS.filter(q=>QD.has(q.id)).reduce((a,q)=>a+q.reward,0);
+  document.getElementById('qp-done').textContent=`${totalDone} / ${total} quêtes`;
+  document.getElementById('qp-bar').style.width=`${(totalDone/total)*100}%`;
+  document.getElementById('qp-pts').textContent=`+${ptsDone} pts gagnés`;
+  QUESTS.forEach(q=>{
+    const st=questState(q);
+    const card=document.createElement('div');
+    card.className=`quest-card ${st==='done'?'qdone':st==='available'?'qavail':'qlocked'}`;
+    const reqHint=st==='locked'&&q.req.length>0
+      ?`Requiert : ${q.req.map(r=>QUESTS.find(qq=>qq.id===r)?.name||r).join(', ')}` : '';
+    card.innerHTML=`
+      <div class="q-top">
+        <div class="q-icon">${q.icon}</div>
+        <div class="q-info">
+          <div class="q-name">${q.name}</div>
+          <div class="q-diff diff-${q.diff}">— ${q.diffLabel} —</div>
+        </div>
+      </div>
+      <div class="q-desc">${st==='done'?`<em>${q.flavor}</em>`:q.desc}</div>
+      ${reqHint?`<div class="q-req">${reqHint}</div>`:''}
+      <div class="q-footer">
+        <div class="q-reward"><span class="dot">✦</span> +${q.reward} point${q.reward>1?'s':''}</div>
+        ${st==='done'
+          ?`<div class="q-done-badge">✦ Accomplie</div>`
+          :st==='available'
+            ?`<button class="q-btn" data-id="${q.id}">Marquer accomplie</button>`
+            :`<div class="q-done-badge" style="color:rgba(245,232,200,.22)">🔒 Verrouillée</div>`
+        }
+      </div>`;
+    if(st==='available') card.querySelector('.q-btn').addEventListener('click',()=>completeQuest(q));
+    grid.appendChild(card);
+  });
+}
+
+/* ════ UTILS ════ */
+function updatePts(){
+  const el=document.getElementById('pval');
+  el.textContent=pts; el.classList.add('flash');
+  setTimeout(()=>el.classList.remove('flash'),400);
+}
+function showNotif(msg){
+  const el=document.getElementById('notif');
+  el.textContent=msg; el.classList.add('show');
+  clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove('show'),2500);
+}
+function burst(x,y,col){
+  for(let i=0;i<14;i++){
+    const p=document.createElement('div'); p.className='particle';
+    const a=(i/14)*Math.PI*2, d=45+Math.random()*60;
+    p.style.cssText=`left:${x}px;top:${y}px;width:${3+Math.random()*4}px;height:${3+Math.random()*4}px;background:${col};--tx:${Math.cos(a)*d}px;--ty:${Math.sin(a)*d}px;animation-duration:${.5+Math.random()*.4}s;box-shadow:0 0 6px ${col};`;
+    document.body.appendChild(p); setTimeout(()=>p.remove(),900);
+  }
+}
+function resetAll(){
+  U.clear(); U.add('start');
+  QD.clear(); bonusPts=0; pts=BASE_PTS;
+  updatePts(); renderQuests(); showNotif('↺ Arbre et quêtes réinitialisés');
+}
+
+/* ════ INIT ════ */
+document.getElementById('resetBtn').addEventListener('click',resetAll);
+document.getElementById('qmodal-overlay').addEventListener('click',e=>{
+  if(e.target===document.getElementById('qmodal-overlay')) closeModal();
+});
+window.addEventListener('resize',()=>{ cancelAnimationFrame(raf); resize(); loop(); });
+renderQuests();
+resize();
+loop();
+
+/* ════ PARALLAX ════
+   Vitesses : layer4 (loin) = 0.015, layer3 = 0.03, layer2 = 0.055, layer1 (proche) = 0.09
+   Le déplacement est basé sur la position de la souris et le scroll.
+*/
+(function(){
+  const layers = [
+    {el: document.getElementById('para4'), sx: 0.010, sy: 0.012},
+    {el: document.getElementById('para3'), sx: 0.022, sy: 0.025},
+    {el: document.getElementById('para2'), sx: 0.042, sy: 0.046},
+    {el: document.getElementById('para1'), sx: 0.075, sy: 0.080},
+  ];
+
+  let mouseX = 0, mouseY = 0, scrollY = 0;
+  let curX = 0, curY = 0;
+
+  // Suivi souris (centré)
+  document.addEventListener('mousemove', e => {
+    mouseX = (e.clientX / window.innerWidth  - 0.5) * 2;  // -1 à 1
+    mouseY = (e.clientY / window.innerHeight - 0.5) * 2;
+  });
+
+  // Scroll
+  window.addEventListener('scroll', () => { scrollY = window.scrollY; }, {passive:true});
+
+  function updateParallax() {
+    layers.forEach(({el, sx, sy}) => {
+      const tx = mouseX * sx * 100;   // pixels déplacés horizontalement
+      const ty = mouseY * sy * 100 + scrollY * sy * 0.5;
+      el.style.transform = `translate(${tx}px, ${ty}px)`;
+    });
+    requestAnimationFrame(updateParallax);
+  }
+  updateParallax();
+})();
+
+</script>
+</body>
+</html>
