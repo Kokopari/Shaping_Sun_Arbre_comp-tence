@@ -278,7 +278,7 @@ const C = {
 */
 const nodes = [
   // ── DÉPART ──
-  {id:'start',label:'Shaping Sun',icon:'✦',branch:'fusion',x:.50,y:.97,r:1.5,root:true,
+  {id:'start',label:'Shaping Sun',icon:'✦',branch:'fusion',x:.50,y:.103,r:1.5,root:true,
    desc:'Point de départ. Tu es l\'artisane de la forêt.',
    effect:'Débloque les 4 premières compétences de chaque branche.',cost:0},
 
@@ -351,13 +351,13 @@ const nodes = [
    effect:'Appâts puissants. Vente max. Preuves irréfutables pour le village.'},
 
   // ── NŒUDS DE FUSION (centre) ──
-  {id:'f0',label:'Sagesse forestière',   icon:'🌿',branch:'fusion',   x:.50,y:.49,r:1.0, cost:0,req:['s2','p1'],cross:true,
+  {id:'f0',label:'Sagesse forestière',   icon:'🌿',branch:'fusion',   x:.50,y:.44,r:1.0, cost:0,req:['s2','p1'],cross:true,
    desc:'Furtivité + pistage : lire la forêt tout en restant invisible.',
    effect:'Camouflée et à l\'affût des traces — créatures rares x1.5.'},
-  {id:'f1',label:'Chasseuse érudite',    icon:'🦋',branch:'fusion',   x:.50,y:.33,r:1.05,cost:0,req:['f0','v2','sc2'],cross:true,
+  {id:'f1',label:'Chasseuse érudite',    icon:'🦋',branch:'fusion',   x:.50,y:.28,r:1.05,cost:0,req:['f0','v2','sc2'],cross:true,
    desc:'Nœud de convergence central — toutes les branches se rejoignent.',
    effect:'Débloque les synergies avancées et les nœuds finaux.'},
-  {id:'f2',label:'Traqueur de rareté',   icon:'✨',branch:'fusion',   x:.50,y:.19,r:1.0, cost:0,req:['p4','sc2'],cross:true,
+  {id:'f2',label:'Traqueur de rareté',   icon:'✨',branch:'fusion',   x:.50,y:.14,r:1.0, cost:0,req:['p4','sc2'],cross:true,
    desc:'Pistage avancé + bestiaire : localiser les créatures mythiques.',
    effect:'Créatures étudiées apparaissent sur la carte du monde.'},
   {id:'f3',label:'Ombre sculptée',       icon:'🌑',branch:'fusion',   x:.50,y:.10,r:1.0, cost:0,req:['s4','sc4'],cross:true,
@@ -365,7 +365,7 @@ const nodes = [
    effect:'Distraction doublée à 60s. Leurres rechargeables au camp.'},
 
   // ── ULTIME ──
-  {id:'ult',label:'Façonneuse du Soleil',icon:'☀️',branch:'fusion',   x:.50,y:.04,r:1.6, cost:5,ultimate:true,
+  {id:'ult',label:'Façonneuse du Soleil',icon:'☀️',branch:'fusion',   x:.50,y:.02,r:1.6, cost:5,ultimate:true,
    req:['v4','s4','p4','sc4','f1','f2','f3'],
    desc:'Armée de toutes tes sculptures, tu révèles les secrets de la forêt. Tes créations brisent le cycle de terreur des mantes — non par la violence, mais par la connaissance.',
    effect:'Fin débloquée. La forêt retrouve la paix. Le village te croit enfin.'},
